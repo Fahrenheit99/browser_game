@@ -1,29 +1,36 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-const GRAVITY = 0.5;
-const JUMP_POWER = 10;
+const ARENA_WIDTH = 640;
+const ARENA_HEIGHT = 420;
+const FLOOR_HEIGHT = 24;
+const PLAYER_WIDTH = 32;
+const PLAYER_HEIGHT = 48;
+const DUCK_HEIGHT = 24;
+const GROUND_Y = ARENA_HEIGHT - FLOOR_HEIGHT;
+const GRAVITY = 0.6;
+const JUMP_POWER = 12;
 const SPEED = 4;
 
 function App() {
   const [x, setX] = useState(80);
-  const [y, setY] = useState(220);
-  const [vx, setVx] = useState(0);
-  const [vy, setVy] = useState(0);
-  const [onGround, setOnGround] = useState(true);
-  const [keys, setKeys] = useState({ left: false, right: false, jump: false });
+  const [y, setY] = useState(GROUND_Y - PLAYER_HEIGHT);
+  const [ducking, setDucking] = useState(false);
+
+  const keysRef = useRef({ left: false, right: false, jump: false, duck: false });
+  const stateRef = useRef({ x: 80, y: GROUND_Y - PLAYER_HEIGHT, vx: 0, vy: 0, onGround: true });
 
   useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') setKeys((k) => ({ ...k, left: true }));
-      if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') setKeys((k) => ({ ...k, right: true }));
-      if (event.key === 'ArrowUp' || event.key === ' ' || event.key.toLowerCase() === 'w') setKeys((k) => ({ ...k, jump: true }));
+    const setKey = (key, value) => {
+      const k = keysRef.current;
+      const lower = key.toLowerCase();
+      if (key === 'ArrowLeft' || lower === 'a') k.left = value;
+      if (key === 'ArrowRight' || lower === 'd') k.right = value;
+      if (key === 'ArrowUp' || key === ' ' || lower === 'w') k.jump = value;
+      if (key === 'ArrowDown' || lower === 's') k.duck = value;
     };
 
-    const handleKeyUp = (event) => {
-      if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') setKeys((k) => ({ ...k, left: false }));
-      if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') setKeys((k) => ({ ...k, right: false }));
-      if (event.key === 'ArrowUp' || event.key === ' ' || event.key.toLowerCase() === 'w') setKeys((k) => ({ ...k, jump: false }));
-    };
+    const handleKeyDown = (event) => setKey(event.key, true);
+    const handleKeyUp = (event) => setKey(event.key, false);
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
@@ -38,61 +45,58 @@ function App() {
     let lastTime = performance.now();
 
     const loop = (time) => {
-      const delta = time - lastTime;
+      const dt = Math.min(time - lastTime, 32) / 16.67;
       lastTime = time;
 
-      setVx((prevVx) => {
-        let nextVx = prevVx;
-        if (keys.left) nextVx = -SPEED;
-        if (keys.right) nextVx = SPEED;
-        if (!keys.left && !keys.right) nextVx = 0;
-        return nextVx;
-      });
+      const keys = keysRef.current;
+      const state = stateRef.current;
 
-      setY((prevY) => {
-        let nextY = prevY;
-        let nextVy = vy;
-        if (keys.jump && onGround) {
-          nextVy = -JUMP_POWER;
-          setOnGround(false);
+      const isDucking = state.onGround && keys.duck;
+      const height = isDucking ? DUCK_HEIGHT : PLAYER_HEIGHT;
+
+      state.vx = isDucking ? 0 : keys.left ? -SPEED : keys.right ? SPEED : 0;
+      state.x += state.vx * dt;
+      if (state.x < 0) state.x = 0;
+      if (state.x > ARENA_WIDTH - PLAYER_WIDTH) state.x = ARENA_WIDTH - PLAYER_WIDTH;
+
+      if (state.onGround) {
+        state.vy = 0;
+        state.y = GROUND_Y - height;
+        if (keys.jump && !keys.duck) {
+          state.vy = -JUMP_POWER;
+          state.onGround = false;
         }
-
-        nextVy += GRAVITY * (delta / 16.67);
-        nextY += nextVy * (delta / 16.67);
-
-        if (nextY >= 220) {
-          nextY = 220;
-          nextVy = 0;
-          setOnGround(true);
+      } else {
+        state.vy += GRAVITY * dt;
+        state.y += state.vy * dt;
+        if (state.y >= GROUND_Y - PLAYER_HEIGHT) {
+          state.y = GROUND_Y - PLAYER_HEIGHT;
+          state.vy = 0;
+          state.onGround = true;
         }
+      }
 
-        setVy(nextVy);
-        return nextY;
-      });
-
-      setX((prevX) => {
-        let nextX = prevX + vx * (delta / 16.67);
-        if (nextX < 20) nextX = 20;
-        if (nextX > 560) nextX = 560;
-        return nextX;
-      });
+      setX(state.x);
+      setY(state.y);
+      setDucking(isDucking);
 
       animationFrame = requestAnimationFrame(loop);
     };
 
     animationFrame = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animationFrame);
-  }, [keys, onGround, vx, vy]);
+  }, []);
 
   return (
     <div className="game-shell">
-      <h1>React Platformer</h1>
-      <p>Use A/D or arrow keys to move, and W/Space to jump.</p>
-      <div className="game-area">
-        <div className="platform" style={{ left: 40, width: 220, top: 280 }} />
-        <div className="platform" style={{ left: 320, width: 180, top: 220 }} />
-        <div className="platform" style={{ left: 120, width: 140, top: 360 }} />
-        <div className="player" style={{ left: x, top: y }} />
+      <h1>Browser Platformer</h1>
+      <p>Use A/D or arrow keys to move, W/Space/Up to jump, and S/Down to duck.</p>
+      <div className="game-area" style={{ width: ARENA_WIDTH, height: ARENA_HEIGHT }}>
+        <div className="floor" style={{ height: FLOOR_HEIGHT }} />
+        <div
+          className="player"
+          style={{ left: x, top: y, width: PLAYER_WIDTH, height: ducking ? DUCK_HEIGHT : PLAYER_HEIGHT }}
+        />
       </div>
     </div>
   );

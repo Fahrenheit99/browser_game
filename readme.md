@@ -6,7 +6,8 @@ A small 2D platformer built with React and Vite. The project currently includes 
 
 - Simple player movement with left/right controls
 - Jump mechanic using W, Arrow Up, or Space
-- Basic platform layout
+- Duck mechanic using S or Arrow Down
+- Plain white background with a floor
 - Lightweight React + Vite setup
 
 ## Controls
@@ -14,6 +15,7 @@ A small 2D platformer built with React and Vite. The project currently includes 
 - A / Left Arrow: move left
 - D / Right Arrow: move right
 - W / Arrow Up / Space: jump
+- S / Down Arrow: duck
 
 ## Project structure
 
