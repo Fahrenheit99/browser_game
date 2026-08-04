@@ -1,28 +1,26 @@
 # Browser Platformer
 
-A small 2D platformer built with React and Vite. The project currently includes a simple playable scene with a moving character, jumping, and basic platforms.
+A small 2D platformer built with React Native and Expo. The project includes a simple playable scene with a moving character, jumping, ducking, and basic on-screen controls, and runs on Android, iOS, and web from a single codebase.
 
 ## Features
 
-- Simple player movement with left/right controls
-- Jump mechanic using W, Arrow Up, or Space
-- Duck mechanic using S or Arrow Down
-- Plain white background with a floor
-- Lightweight React + Vite setup
+- Simple player movement with on-screen left/right buttons
+- Jump and duck mechanics via on-screen buttons
+- Animated slime sprite (idle/walk/duck states) built from sprite sheets
+- Runs natively on Android/iOS and in the browser via Expo's web support
 
 ## Controls
 
-- A / Left Arrow: move left
-- D / Right Arrow: move right
-- W / Arrow Up / Space: jump
-- S / Down Arrow: duck
+- ◀ / ▶ buttons: move left / right
+- JUMP button: jump
+- DUCK button: duck
 
 ## Project structure
 
-- src/App.jsx: main game logic and player movement
-- src/styles.css: visual styling for the game scene
-- src/main.jsx: React entry point
-- index.html: app shell
+- App.js: main game logic, game loop, and UI
+- app.json: Expo app configuration
+- babel.config.js: Babel config (babel-preset-expo)
+- src/assets/sprites: player sprite sheets
 
 ## Getting started
 
@@ -31,18 +29,19 @@ A small 2D platformer built with React and Vite. The project currently includes 
    npm install
    ```
 
-2. Start the development server:
+2. Start the Expo development server:
    ```bash
-   npm run dev
+   npm start
    ```
 
-3. Open the local URL shown by Vite in your browser.
+   Then choose a platform from the Expo CLI, or run one of:
+   ```bash
+   npm run android
+   npm run ios
+   npm run web
+   ```
 
-## Build for production
-
-```bash
-npm run build
-```
+3. Use Expo Go (Android/iOS) or your browser to open the app, depending on the platform chosen.
 
 ## Next ideas
 
@@ -53,3 +52,4 @@ You can expand this project by adding:
 - multiple levels
 - sound effects and music
 - score and lives
+
