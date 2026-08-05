@@ -53,3 +53,15 @@ You can expand this project by adding:
 - sound effects and music
 - score and lives
 
+## AI & Asset Disclosure
+
+This project was built entirely with the assistance of AI (GitHub Copilot) — all
+game logic, code, and iterative changes in this repository were generated and
+refined through AI pair-programming.
+
+The character sprites (idle/walk/death sprite sheets) are free-license assets
+from [CraftPix](https://craftpix.net) (freebie tier). Under CraftPix's freebie
+license, these assets may be used freely in personal and commercial projects; no
+attribution is required, but credit is appreciated, so it's given here.
+
+

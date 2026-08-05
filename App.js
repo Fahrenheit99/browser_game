@@ -27,7 +27,7 @@ const SPRITE_ROW = 2;
 const IDLE_FRAME_COUNT = 6;
 const WALK_FRAME_COUNT = 8;
 const DUCK_FRAME_COUNT = 10;
-const DUCK_FROZEN_FRAME = 1;
+const DUCK_FROZEN_FRAME = DUCK_FRAME_COUNT - 1;
 const FRAME_DURATION = 120;
 
 export default function App() {
@@ -89,7 +89,7 @@ export default function App() {
 
       if (state.onGround) {
         state.vy = 0;
-        state.y = GROUND_Y - height;
+        // state.y = GROUND_Y - height;
         if (keys.jump && !keys.duck) {
           state.vy = -JUMP_POWER;
           state.onGround = false;
