@@ -25,22 +25,23 @@ A small 2D platformer built with React Native and Expo. The project includes a s
 ## Getting started
 
 1. Install dependencies:
+
    ```bash
    npm install
    ```
-
 2. Start the Expo development server:
+
    ```bash
    npm start
    ```
 
    Then choose a platform from the Expo CLI, or run one of:
+
    ```bash
    npm run android
    npm run ios
    npm run web
    ```
-
 3. Use Expo Go (Android/iOS) or your browser to open the app, depending on the platform chosen.
 
 ## Next ideas
@@ -63,5 +64,3 @@ The character sprites (idle/walk/death sprite sheets) are free-license assets
 from [CraftPix](https://craftpix.net) (freebie tier). Under CraftPix's freebie
 license, these assets may be used freely in personal and commercial projects; no
 attribution is required, but credit is appreciated, so it's given here.
-
-
