@@ -1,16 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, Image, Pressable, StyleSheet, Text } from 'react-native';
 
-import idleSheet from '../assets/sprites/Slime1_Idle_without_shadow.png';
-import walkSheet from '../assets/sprites/Slime1_Walk_without_shadow.png';
-import deathSheet from '../assets/sprites/Slime1_Death_without_shadow.png';
 import { getTheme, CONTROL_SIZES } from '../styles/theme';
+import { CHARACTERS, CHARACTER_FRAME_SIZE, CHARACTER_ROWS } from '../data/characters';
 
 const ARENA_WIDTH = 640;
 const ARENA_HEIGHT = 420;
 const FLOOR_HEIGHT = 24;
-const PLAYER_WIDTH = 48;
-const PLAYER_HEIGHT = 48;
+const PLAYER_WIDTH = CHARACTER_FRAME_SIZE;
+const PLAYER_HEIGHT = CHARACTER_FRAME_SIZE;
 const DUCK_HEIGHT = 30;
 const GROUND_Y = ARENA_HEIGHT - FLOOR_HEIGHT;
 const GRAVITY = 0.6;
@@ -22,15 +20,8 @@ const FRICTION = 0.5;
 const DASH_SPEED = MAX_SPEED * 2.2;
 const DASH_DURATION = 220;
 const DOUBLE_TAP_WINDOW = 300;
-
-// The spritesheets are laid out as [row = facing direction][col = animation frame],
-// each frame a 64x64 square. Row 2 is the left-facing strip; the right-facing look
-// is achieved by mirroring that same row horizontally.
-const SPRITE_ROW = 2;
-const IDLE_FRAME_COUNT = 6;
-const WALK_FRAME_COUNT = 8;
-const DUCK_FRAME_COUNT = 10;
-const DUCK_FROZEN_FRAME = DUCK_FRAME_COUNT - 1;
+const ATTACK_DURATION = 250;
+const INTERACT_DURATION = 400;
 const FRAME_DURATION = 120;
 
 // --- Atomic game-logic helpers ---
@@ -100,18 +91,22 @@ function advanceAnimationFrame(animTimer, animFrame, rawDelta, frameCount) {
   return { animTimer: timer, animFrame: frame };
 }
 
-function getSpriteConfig(ducking, moving) {
+function getSpriteConfig(character, ducking, moving) {
   if (ducking) {
-    return { sheet: deathSheet, frameCount: DUCK_FRAME_COUNT, frozenFrame: DUCK_FROZEN_FRAME };
+    const duck = character.sprites.duck;
+    return { sheet: duck.sheet, frameCount: duck.frameCount, frozenFrame: duck.frozenFrame ?? duck.frameCount - 1 };
   }
   if (moving) {
-    return { sheet: walkSheet, frameCount: WALK_FRAME_COUNT, frozenFrame: null };
+    const walk = character.sprites.walk;
+    return { sheet: walk.sheet, frameCount: walk.frameCount, frozenFrame: null };
   }
-  return { sheet: idleSheet, frameCount: IDLE_FRAME_COUNT, frozenFrame: null };
+  const idle = character.sprites.idle;
+  return { sheet: idle.sheet, frameCount: idle.frameCount, frozenFrame: null };
 }
 
-export default function GameScreen({ stage, controlSize = 'normal', highContrast = false, onExit }) {
+export default function GameScreen({ stage, character, controlSize = 'normal', highContrast = false, onExit }) {
   const theme = getTheme(highContrast);
+  const activeCharacter = character ?? CHARACTERS[0];
   const buttonSize = CONTROL_SIZES[controlSize] ?? CONTROL_SIZES.normal;
   const dPadSize = buttonSize * 2.6;
   const armOffset = dPadSize / 2 - buttonSize / 2;
@@ -122,6 +117,8 @@ export default function GameScreen({ stage, controlSize = 'normal', highContrast
   const [facing, setFacing] = useState('right');
   const [frame, setFrame] = useState(0);
   const [moving, setMoving] = useState(false);
+  const [attacking, setAttacking] = useState(false);
+  const [interacting, setInteracting] = useState(false);
 
   const keysRef = useRef({ left: false, right: false, jump: false, duck: false });
   const stateRef = useRef({
@@ -139,10 +136,20 @@ export default function GameScreen({ stage, controlSize = 'normal', highContrast
     lastRightTap: 0,
     doubleJumpAvailable: true,
     jumpKeyWasDown: false,
+    attackTimeRemaining: 0,
+    interactTimeRemaining: 0,
   });
 
   const setKey = (key, value) => {
     keysRef.current[key] = value;
+  };
+
+  const triggerAttack = () => {
+    stateRef.current.attackTimeRemaining = ATTACK_DURATION;
+  };
+
+  const triggerInteract = () => {
+    stateRef.current.interactTimeRemaining = INTERACT_DURATION;
   };
 
   const handleDirectionPress = (direction) => {
@@ -175,6 +182,12 @@ export default function GameScreen({ stage, controlSize = 'normal', highContrast
 
       if (state.dashTimeRemaining > 0) {
         state.dashTimeRemaining = Math.max(0, state.dashTimeRemaining - rawDelta);
+      }
+      if (state.attackTimeRemaining > 0) {
+        state.attackTimeRemaining = Math.max(0, state.attackTimeRemaining - rawDelta);
+      }
+      if (state.interactTimeRemaining > 0) {
+        state.interactTimeRemaining = Math.max(0, state.interactTimeRemaining - rawDelta);
       }
 
       // Horizontal movement
@@ -218,7 +231,7 @@ export default function GameScreen({ stage, controlSize = 'normal', highContrast
       // Animation
       if (!ducking) {
         const isMoving = state.vx !== 0;
-        const frameCount = isMoving ? WALK_FRAME_COUNT : IDLE_FRAME_COUNT;
+        const frameCount = isMoving ? activeCharacter.sprites.walk.frameCount : activeCharacter.sprites.idle.frameCount;
         const anim = advanceAnimationFrame(state.animTimer, state.animFrame, rawDelta, frameCount);
         state.animTimer = anim.animTimer;
         state.animFrame = anim.animFrame;
@@ -230,6 +243,8 @@ export default function GameScreen({ stage, controlSize = 'normal', highContrast
       setY(state.y);
       setDucking(ducking);
       setFacing(state.facing);
+      setAttacking(state.attackTimeRemaining > 0);
+      setInteracting(state.interactTimeRemaining > 0);
 
       animationFrame = requestAnimationFrame(loop);
     };
@@ -239,7 +254,7 @@ export default function GameScreen({ stage, controlSize = 'normal', highContrast
   }, []);
 
   const height = getPlayerHeight(ducking);
-  const { sheet, frameCount, frozenFrame } = getSpriteConfig(ducking, moving);
+  const { sheet, frameCount, frozenFrame } = getSpriteConfig(activeCharacter, ducking, moving);
   const displayFrame = frozenFrame !== null ? frozenFrame : frame;
 
   return (
@@ -274,14 +289,27 @@ export default function GameScreen({ stage, controlSize = 'normal', highContrast
             source={sheet}
             style={{
               width: PLAYER_WIDTH * frameCount,
-              height: height * 4,
+              height: height * CHARACTER_ROWS,
               transform: [
                 { translateX: -displayFrame * PLAYER_WIDTH },
-                { translateY: -SPRITE_ROW * height },
+                { translateY: -activeCharacter.spriteRow * height },
               ],
             }}
           />
         </View>
+        {attacking && (
+          <Text
+            style={[
+              styles.actionEmoji,
+              { left: x + (facing === 'right' ? PLAYER_WIDTH : -PLAYER_WIDTH * 0.4), top: y - 6 },
+            ]}
+          >
+            ⚔️
+          </Text>
+        )}
+        {interacting && (
+          <Text style={[styles.actionEmoji, { left: x + PLAYER_WIDTH / 2 - 12, top: y - 28 }]}>✋</Text>
+        )}
       </View>
 
       <View style={[styles.controls, { width: ARENA_WIDTH }]}>
@@ -325,6 +353,29 @@ export default function GameScreen({ stage, controlSize = 'normal', highContrast
             onPressOut={() => setKey('right', false)}
           >
             <Text style={[styles.buttonText, { color: theme.primaryText, fontSize: buttonSize / 2 }]}>▶</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.actionButtons}>
+          <Pressable
+            style={[
+              styles.button,
+              { width: buttonSize, height: buttonSize, borderRadius: buttonSize / 2, backgroundColor: theme.primary },
+            ]}
+            onPress={triggerAttack}
+            accessibilityLabel="Attack"
+          >
+            <Text style={[styles.buttonText, { fontSize: buttonSize / 2 }]}>⚔️</Text>
+          </Pressable>
+          <Pressable
+            style={[
+              styles.button,
+              { width: buttonSize, height: buttonSize, borderRadius: buttonSize / 2, backgroundColor: theme.primary },
+            ]}
+            onPress={triggerInteract}
+            accessibilityLabel="Interact"
+          >
+            <Text style={[styles.buttonText, { fontSize: buttonSize / 2 }]}>✋</Text>
           </Pressable>
         </View>
       </View>
@@ -372,10 +423,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     overflow: 'hidden',
   },
+  actionEmoji: {
+    position: 'absolute',
+    fontSize: 24,
+  },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
   },
   dPad: {
     position: 'relative',
@@ -385,6 +440,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
   },
   button: {
     alignItems: 'center',

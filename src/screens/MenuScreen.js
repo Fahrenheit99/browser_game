@@ -3,6 +3,7 @@ import { getTheme } from '../styles/theme';
 
 const MENU_ITEMS = [
   { key: 'stages', label: 'Play' },
+  { key: 'characters', label: 'Characters' },
   { key: 'settings', label: 'Settings' },
   { key: 'about', label: 'About' },
 ];
